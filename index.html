@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CITY OUTLAW — Browser Test</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101923;color:#fff;font-family:system-ui,Arial}
+canvas{display:block}#hud{position:fixed;inset:0;pointer-events:none}.brand{position:absolute;top:16px;left:18px;font-weight:900;letter-spacing:2px;text-shadow:0 2px 10px #000;font-size:18px}.status{position:absolute;right:18px;top:16px;background:#09121bcc;border:1px solid #ffffff2b;border-radius:12px;padding:10px 14px;font-size:12px;line-height:1.6}.help{position:absolute;left:18px;bottom:18px;background:#09121bcc;border:1px solid #ffffff2b;border-radius:12px;padding:10px 13px;font-size:12px;color:#dbe7f2}
+#mobile{display:none;position:fixed;bottom:20px;left:0;right:0;justify-content:space-between;padding:0 22px;pointer-events:none}.cluster{display:flex;gap:10px;align-items:end}.btn{pointer-events:auto;border:1px solid #ffffff55;background:#0b1725b8;color:white;border-radius:50%;width:62px;height:62px;font-weight:800;font-size:18px;touch-action:none;user-select:none}.btn:active{background:#3c82c7}.small{width:52px;height:52px;font-size:12px}@media(max-width:800px){#mobile{display:flex}.help{display:none}.status{font-size:10px;padding:7px 9px}.brand{font-size:15px}}
+</style>
+</head>
+<body>
+<div id="hud"><div class="brand">CITY OUTLAW <span style="color:#55c6ff">/ TEST BUILD</span></div><div class="status"><div>FREE ROAM · CITY DISTRICT</div><div id="speed">SPEED 0 km/h</div><div id="state">ENGINE READY</div></div><div class="help">WASD / Arrow keys: drive · Space: brake · Mouse drag: look · R: reset</div></div>
+<div id="mobile"><div class="cluster"><button class="btn" data-key="left">◀</button><button class="btn" data-key="right">▶</button></div><div class="cluster"><button class="btn small" data-key="brake">BRAKE</button><button class="btn" data-key="gas">GAS</button></div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ab3d0);scene.fog=new THREE.Fog(0x8ab3d0,90,280);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,500);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xdceeff,0x59616b,2));
+const sun=new THREE.DirectionalLight(0xfff0d2,2.2);sun.position.set(-50,90,40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-100;sun.shadow.camera.right=100;sun.shadow.camera.top=100;sun.shadow.camera.bottom=-100;scene.add(sun);
+const mat=(c,rough=.8)=>new THREE.MeshStandardMaterial({color:c,roughness:rough});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(500,500),mat(0x65786c));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const roadMat=mat(0x292f35),lineMat=mat(0xe6d9a2),sideMat=mat(0x9b9c95);
+function box(w,h,d,m,x,y,z,shadow=true){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=shadow;o.receiveShadow=true;scene.add(o);return o}
+for(let i=-4;i<=4;i++){
+ let p=i*35;
+ box(12,.04,360,roadMat,p,0.025,0);box(360,.04,12,roadMat,0,.026,p);
+ box(.18,.03,360,lineMat,p-5,0.06,0,false);box(.18,.03,360,lineMat,p+5,0.06,0,false);
+ box(360,.03,.18,lineMat,0,.06,p-5,false);box(360,.03,.18,lineMat,0,.06,p+5,false);
+}
+const colors=[0x87949c,0xb7a48d,0x667987,0x9d9a8c,0x52616b,0xc2b9a5,0x777d83];
+for(let gx=-4;gx<=4;gx++)for(let gz=-4;gz<=4;gz++){
+ if(Math.abs(gx%1)<1 && (Math.abs(gx*35)%35===0)){}
+ const x=gx*35+((gx+gz)%2?12:-12),z=gz*35+((gx-gz)%2?12:-12);
+ if(Math.abs(x)<15&&Math.abs(z)<15)continue;
+ const w=12+Math.random()*8,d=12+Math.random()*8,h=10+Math.random()*38;
+ const b=box(w,h,d,mat(colors[Math.floor(Math.random()*colors.length)]),x,h/2,z);
+ // rooftop block details
+ if(h>27)box(w*.65,1.2,d*.65,mat(0x454d55),x,h+.6,z);
+ // simple window bands
+ for(let yy=3;yy<h-1;yy+=3.2){
+  const winmat=mat(0x8eb5c3,.35);
+  for(let xx=-w/2+1.5;xx<w/2-1;xx+=2.7)box(.95,1.25,.06,winmat,x+xx,yy,z+d/2+.04,false);
+ }
+}
+// street lights
+for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++){
+ let x=i*35+8,z=j*35+8;
+ box(.18,5,.18,mat(0x3d4448),x,2.5,z,false);box(1.4,.12,.22,mat(0x42494b),x+.6,5,z,false);
+ box(.4,.12,.4,mat(0xffe7a1),x+1.2,4.9,z,false);
+}
+const car=new THREE.Group();scene.add(car);
+const body= new THREE.Mesh(new THREE.BoxGeometry(2.1,.65,4),mat(0x1b75aa,.32));body.position.y=.75;body.castShadow=true;car.add(body);
+const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.65,.7,1.9),mat(0x182832,.25));cabin.position.set(0,1.38,-.25);cabin.castShadow=true;car.add(cabin);
+const glass=new THREE.MeshStandardMaterial({color:0x6d9cae,metalness:.25,roughness:.2});
+const windshield=new THREE.Mesh(new THREE.BoxGeometry(1.5,.45,.05),glass);windshield.position.set(0,1.42, .72);car.add(windshield);
+const wheelMat=mat(0x17191b);const wheels=[];
+for(const x of [-1.05,1.05])for(const z of [-1.25,1.25]){let w=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.25,16),wheelMat);w.rotation.z=Math.PI/2;w.position.set(x,.42,z);w.castShadow=true;car.add(w);wheels.push(w)}
+for(const x of [-.7,.7]){let lamp=new THREE.Mesh(new THREE.BoxGeometry(.38,.18,.06),mat(0xffefc2));lamp.position.set(x,.8,2.02);car.add(lamp)}
+car.position.set(0,0,0);
+const keys={};let speed=0,steer=0,heading=0,camYaw=0,camPitch=.2,drag=false,lastX=0,lastY=0;
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='r'){car.position.set(0,0,0);speed=0;heading=0}});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointerup',()=>drag=false);
+renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;camYaw-=(e.clientX-lastX)*.006;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-lastY)*.004,-.05,.65);lastX=e.clientX;lastY=e.clientY});
+const mobile={};document.querySelectorAll('.btn').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();mobile[k]=true};const off=e=>{e.preventDefault();mobile[k]=false};b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off)});
+const clock=new THREE.Clock();
+function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.04);
+ let gas=(keys.w||keys.arrowup||mobile.gas)?1:0,rev=(keys.s||keys.arrowdown)?1:0;
+ let turn=(keys.a||keys.arrowleft||mobile.left)?1:0;turn-=(keys.d||keys.arrowright||mobile.right)?1:0;
+ let brake=keys[' ']||mobile.brake;
+ if(gas)speed+=13*dt;else if(rev)speed-=9*dt;else speed*=Math.pow(.985,dt*60);
+ if(brake)speed*=Math.pow(.88,dt*60);speed=THREE.MathUtils.clamp(speed,-8,34);
+ const steerFactor=THREE.MathUtils.clamp(Math.abs(speed)/7,.18,1);
+ heading+=turn*1.65*steerFactor*Math.sign(speed||1)*dt;
+ car.rotation.y=heading;car.position.x+=Math.sin(heading)*speed*dt;car.position.z+=Math.cos(heading)*speed*dt;
+ wheels.forEach(w=>w.rotation.x+=speed*dt*1.8);
+ const followAngle=heading+camYaw;
+ const desired=new THREE.Vector3(car.position.x-Math.sin(followAngle)*9,car.position.y+3.7+camPitch*3,car.position.z-Math.cos(followAngle)*9);
+ camera.position.lerp(desired,1-Math.exp(-5*dt));camera.lookAt(car.position.x,car.position.y+1,car.position.z);
+ document.getElementById('speed').textContent='SPEED '+Math.round(Math.abs(speed)*3.6)+' km/h';
+ document.getElementById('state').textContent=brake?'BRAKING':speed>1?'ENGINE RUNNING':'ENGINE READY';
+ renderer.render(scene,camera)}
+loop();addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
